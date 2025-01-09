@@ -1,1 +1,1 @@
-rootProject.name = "GamblingSkyblock"
+rootProject.name = "GamblingTowers"

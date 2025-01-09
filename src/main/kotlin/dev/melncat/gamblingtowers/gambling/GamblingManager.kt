@@ -1,9 +1,6 @@
-package dev.melncat.gamblingskyblock.gambling
+package dev.melncat.gamblingtowers.gambling
 
-import com.destroystokyo.paper.MaterialSetTag
-import com.destroystokyo.paper.MaterialTags
-import com.sun.source.doctree.AttributeTree.ValueKind
-import io.papermc.paper.datacomponent.DataComponentType
+import dev.melncat.gamblingtowers.GamblingTowers
 import io.papermc.paper.datacomponent.DataComponentTypes
 import io.papermc.paper.datacomponent.item.Consumable
 import io.papermc.paper.datacomponent.item.FoodProperties
@@ -12,24 +9,20 @@ import io.papermc.paper.datacomponent.item.ItemEnchantments
 import io.papermc.paper.datacomponent.item.PotionContents
 import io.papermc.paper.registry.RegistryAccess
 import io.papermc.paper.registry.RegistryKey
-import io.papermc.paper.registry.keys.tags.ItemTypeTagKeys
 import net.kyori.adventure.key.Key
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.format.TextColor
-import net.kyori.adventure.title.Title
 import org.bukkit.Bukkit
 import org.bukkit.Color
+import org.bukkit.GameMode
 import org.bukkit.Material
 import org.bukkit.Registry
-import org.bukkit.Tag
 import org.bukkit.inventory.ItemStack
-import org.bukkit.inventory.meta.components.FoodComponent
-import org.bukkit.plugin.Plugin
 import org.bukkit.potion.PotionEffect
-import org.bukkit.potion.PotionEffectType
 import org.bukkit.potion.PotionType
 import java.math.RoundingMode
+import kotlin.math.max
 import kotlin.math.min
 import kotlin.random.Random
 
@@ -54,19 +47,21 @@ object GamblingManager {
 		"Cancer",
 		"Sigma"
 	)
-	private var nextTime = System.currentTimeMillis() + 1000 * 60
-	private var nextBiomeTime = System.currentTimeMillis() + 10000 * 60
+	private var nextTime = System.currentTimeMillis() + 1000 * 14
+	private var nextBiomeTime = System.currentTimeMillis() + 1000 * 60
+	private lateinit var plugin: GamblingTowers
 	
-	fun setupGambling(plugin: Plugin) {
+	fun setupGambling(plugin: GamblingTowers) {
+		this.plugin = plugin
 		Bukkit.getScheduler().runTaskTimer(plugin, ::tickGambling, 0L, 2L)
 		Bukkit.getScheduler().runTaskTimer(plugin, ::tickBiomeGambling, 0L, 2L)
 	}
 	
 	private fun tickBiomeGambling() {
-		if (!enabled) return
-		val players = Bukkit.getOnlinePlayers()
+		//if (!enabled) return
+		val players = Bukkit.getOnlinePlayers().filter { it.world == plugin.minigameWorld.cbWorld }
 		if (nextBiomeTime > System.currentTimeMillis()) return
-		nextBiomeTime = System.currentTimeMillis() + 10000 * 60
+		nextBiomeTime = System.currentTimeMillis() + 1000 * 60
 		val chunks = players.map { it.location.chunk }.distinct()
 		for (chunk in chunks) {
 			val biome = RegistryAccess.registryAccess().getRegistry(RegistryKey.BIOME).toList().random()
@@ -83,8 +78,8 @@ object GamblingManager {
 	
 	
 	private fun tickGambling() {
-		if (!enabled) return
-		val players = Bukkit.getOnlinePlayers()
+		//if (!enabled) return
+		val players = Bukkit.getOnlinePlayers().filter { it.world == plugin.minigameWorld.cbWorld }
 		if (nextTime > System.currentTimeMillis()) {
 			val remaining = nextTime - System.currentTimeMillis()
 			if (remaining < 10000) {
@@ -96,23 +91,26 @@ object GamblingManager {
 			}
 			return
 		}
-		nextTime = System.currentTimeMillis() + 1000 * 60
+		nextTime = System.currentTimeMillis() + max(1000 * 15 - 1500 * (System.currentTimeMillis() - plugin.manager.startTime) / (1000 * 60), 3000)
 		for (player in players) {
+			if (player.gameMode == GameMode.SPECTATOR) continue
 			player.sendActionBar(Component.empty())
 			val item = generateRandomItem()
-			player.sendMessage(Component.text("You got ").append(item.displayName()).append(Component.text("!")))
+			//player.sendMessage(Component.text("You got ").append(item.displayName()).append(Component.text("!")))
 			val leftovers = player.inventory.addItem(item)
-			if (leftovers.isNotEmpty()) player.world.dropItemNaturally(player.location, leftovers.values.first())
+			//if (leftovers.isNotEmpty()) player.world.dropItemNaturally(player.location, leftovers.values.first())
 		}
 	}
 	
 	private fun generateRandomItem(): ItemStack {
 		if (Random.nextInt(100) < 90) {
-			val material = possible.random()
+			val material = 
+				if (Random.nextInt(100) < 80) possible.random()
+				else possible.filter { x -> x.isBlock }.random()
 			val item = ItemStack(material)
 			return item
 		}
-		if (Random.nextInt(100) < 20) {
+		if (Random.nextInt(100) < 50) {
 			val potionMaterial = potions.random()
 			val potion = ItemStack(potionMaterial)
 			val color = Color.fromRGB(Random.nextInt(0x1000000));

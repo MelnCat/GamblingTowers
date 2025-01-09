@@ -1,5 +1,10 @@
 name: GamblingSkyblock
 version: '1.0-SNAPSHOT'
-main: dev.melncat.gamblingskyblock.GamblingSkyblock
+main: dev.melncat.gamblingtowers.GamblingTowers
 api-version: '1.21'
 authors: [ MelnCat ]
+dependencies: 
+  server: 
+    Multiverse-Core:
+      load: BEFORE
+      required: true
